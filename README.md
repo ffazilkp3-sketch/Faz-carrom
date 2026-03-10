@@ -1,2 +1,0 @@
-# Faz-carrom
-Carrom pool
