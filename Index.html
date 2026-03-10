@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Fazil Carrom Pro</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body { margin: 0; background: #1a0f0a; color: white; font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; overflow: hidden; touch-action: none; }
+        #game-container { position: relative; border: 12px solid #3e2723; border-radius: 20px; box-shadow: 0 15px 50px rgba(0,0,0,0.9); }
+        canvas { background-image: url('https://i.imgur.com/8Y4W4Xj.png'); background-size: cover; border-radius: 8px; width: 90vw !important; height: 90vw !important; max-width: 500px; max-height: 500px; }
+        #ui { width: 85%; margin-top: 20px; text-align: center; }
+        input[type=range] { width: 100%; height: 45px; accent-color: #ffd700; }
+        .label { color: #ffd700; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div id="game-container"><canvas id="world"></canvas></div>
+    <div id="ui">
+        <div class="label">Position Striker</div>
+        <input type="range" id="strikerSlider" min="75" max="525" value="300">
+    </div>
+    <script>
+        const { Engine, Render, Runner, Bodies, Composite, Vector, Events } = Matter;
+        const engine = Engine.create(); engine.gravity.y = 0;
+        const render = Render.create({ canvas: document.getElementById('world'), engine: engine, options: { width: 600, height: 600, wireframes: false, background: 'transparent' } });
+        const striker = Bodies.circle(300, 485, 26, { label: 'striker', restitution: 0.5, frictionAir: 0.07, render: { fillStyle: '#ffeb3b', strokeStyle: '#fff', lineWidth: 4 } });
+        const coins = [];
+        const config = [{x: 300, y: 300, c: '#d32f2f'}, {x: 338, y: 300, c: '#fff'}, {x: 262, y: 300, c: '#fff'}, {x: 319, y: 333, c: '#333'}, {x: 281, y: 333, c: '#333'}, {x: 319, y: 267, c: '#333'}, {x: 281, y: 267, c: '#333'}];
+        config.forEach(p => coins.push(Bodies.circle(p.x, p.y, 18, { restitution: 0.4, frictionAir: 0.04, render: { fillStyle: p.c } })));
+        Composite.add(engine.world, [striker, ...coins]);
+        const slider = document.getElementById('strikerSlider');
+        let canShoot = true;
+        slider.oninput = (e) => { if(canShoot) Matter.Body.setPosition(striker, { x: parseInt(e.target.value), y: 485 }); };
+        let startY = 0;
+        window.ontouchstart = (e) => { if(canShoot) startY = e.touches[0].clientY; };
+        window.ontouchend = (e) => {
+            if(canShoot) {
+                const force = (e.changedTouches[0].clientY - startY) * 0.0006;
+                if(force > 0.01) { Matter.Body.applyForce(striker, striker.position, { x: 0, y: -force }); canShoot = false; }
+            }
+        };
+        Events.on(engine, 'afterUpdate', () => {
+            const moving = Composite.allBodies(engine.world).some(b => Vector.magnitude(b.velocity) > 0.2);
+            if (!canShoot && !moving) { Matter.Body.setPosition(striker, { x: parseInt(slider.value), y: 485 }); Matter.Body.setVelocity(striker, { x: 0, y: 0 }); canShoot = true; }
+        });
+        Render.run(render); Runner.run(Runner.create(), engine);
+    </script>
+</body>
+</html>
